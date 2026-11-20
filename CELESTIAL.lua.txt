@@ -1,8 +1,8 @@
 -- Configuration
 local chatDelay = 1.25
 local messages = {
-    "//FLING FPS LOADED\\",
-    "OWNER SCRIPT AMIR_FPS17",
+    "//FLING OF FLASH LOADED\\",
+    "OWNER SCRIPT FLASH",
     " BUILT FOR FLASH",
     "LOADING"
 }
