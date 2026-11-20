@@ -40,7 +40,7 @@ task.spawn(function()
     
     -- Execute the external Patchma Hub script after the final delay
     local success, err = pcall(function()
-       loadstring(game:HttpGet("https://raw.githubusercontent.com/MANASMCPE/weldByMonkAndLisa/refs/heads/main/weld.lua"))()
+       loadstring(game:HttpGet("https://raw.githubusercontent.com/mamalikhare996-lab/FPS_FLING/refs/heads/main/weld.lua.txt"))()
     end)
     
     if not success then
