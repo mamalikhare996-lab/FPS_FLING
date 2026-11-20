@@ -1,0 +1,784 @@
+--// owner script amir_fps17 renamedd and some formatting, good luck reading this bs ðŸ¤· //--
+
+local players_service = game:GetService("Players")
+local run_service = game:GetService("RunService")
+local local_player = players_service.LocalPlayer
+local player_character = local_player.Character or local_player.CharacterAdded:Wait()
+local humanoid_root_part = player_character:WaitForChild("HumanoidRootPart")
+local humanoid = player_character:WaitForChild("Humanoid")
+local spawn_position = Vector3.new(0, 100, 0)
+local min_height_threshold = 5
+local max_height_threshold = -20
+local max_y_position = 500
+local velocity_threshold = 100
+local last_safe_position = humanoid_root_part.Position
+local is_anti_exploit_active = false
+run_service.Heartbeat:Connect(function()
+	local current_pos = humanoid_root_part.Position
+	if current_pos.Y > min_height_threshold and current_pos.Y < max_y_position then
+		last_safe_position = current_pos
+	end
+end)
+run_service.Heartbeat:Connect(function()
+	if is_anti_exploit_active then
+		return
+	end
+	is_anti_exploit_active = true
+	local current_pos = humanoid_root_part.Position
+	local velocity_magnitude = humanoid_root_part.AssemblyLinearVelocity.Magnitude
+	local velocity_y = humanoid_root_part.AssemblyLinearVelocity.Y
+	if velocity_magnitude > velocity_threshold or math.abs(velocity_y) > 90 then
+		humanoid_root_part.CFrame = CFrame.new(spawn_position)
+		humanoid_root_part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+		humanoid.Health = humanoid.MaxHealth
+		return
+	end
+	if current_pos.Y > max_y_position then
+		humanoid_root_part.CFrame = CFrame.new(spawn_position)
+		humanoid_root_part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+		humanoid.Health = humanoid.MaxHealth
+		return
+	end
+	if current_pos.Y < min_height_threshold and current_pos.Y > max_height_threshold then
+		humanoid_root_part.CFrame = CFrame.new(spawn_position)
+		humanoid_root_part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+		humanoid.Health = humanoid.MaxHealth
+		return
+	end
+	if current_pos.Y < max_height_threshold then
+		humanoid_root_part.CFrame = CFrame.new(last_safe_position.X, math.max(100, last_safe_position.Y), last_safe_position.Z)
+		humanoid_root_part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+		humanoid.Health = humanoid.MaxHealth
+	end
+	is_anti_exploit_active = false
+end)
+local_player.CharacterAdded:Connect(function(_newChar)
+	player_character = _newChar
+	humanoid_root_part = player_character:WaitForChild("HumanoidRootPart")
+	humanoid = player_character:WaitForChild("Humanoid")
+	wait(0.5)
+	spawn_position = humanoid_root_part.Position
+end)
+local rayfield_lib = (loadstring(game:HttpGet("https://sirius.menu/rayfield")))()
+local players_service_2 = game:GetService("Players")
+local run_service_2 = game:GetService("RunService")
+local local_player_2 = players_service_2.LocalPlayer
+local main_window = rayfield_lib:CreateWindow({
+	Name = "FPS fling ringe v4",
+	Icon = 0,
+	LoadingTitle = "Rayfield Interface Suite",
+	LoadingSubtitle = "by amir",
+	ShowText = "FPS FLING",
+	Theme = "Default",
+	ToggleUIKeybind = "K",
+	DisableRayfieldPrompts = false,
+	DisableBuildWarnings = false,
+	ConfigurationSaving = {
+		Enabled = true,
+		FolderName = nil,
+		FileName = "Big Hub"
+	},
+	Discord = {
+		Enabled = false,
+		Invite = "noinvitelink",
+		RememberJoins = true
+	},
+	KeySystem = false
+})
+local main_tab = main_window:CreateTab("Tab Example", 4483362458)
+local tab_players_service = game:GetService("Players")
+local tab_run_service = game:GetService("RunService")
+local tab_local_player = tab_players_service.LocalPlayer
+local selected_target = nil
+main_tab:CreateInput({
+	Name = "Select Target",
+	PlaceholderText = "Username / Display",
+	RemoveTextAfterFocusLost = false,
+	Callback = function(_inputText)
+		_inputText = (tostring(_inputText or "")):lower()
+		selected_target = nil
+		for _idx, _player in ipairs(tab_players_service:GetPlayers()) do
+			local player_name_lower = _player.Name:lower()
+			local player_display_name_lower = (_player.DisplayName or _player.Name):lower()
+			if player_name_lower == _inputText or player_display_name_lower == _inputText or player_name_lower:sub(1, #_inputText) == _inputText or player_display_name_lower:sub(1, #_inputText) == _inputText then
+				selected_target = _player
+				break
+			end
+		end
+		if selected_target then
+			rayfield_lib:Notify({
+				Title = "Target Selected",
+				Content = selected_target.Name,
+				Duration = 3
+			})
+		end
+	end
+})
+local function create_ability_toggle(_ability_name, _offset_vector, _should_kill)
+	local heartbeat_connection
+	local is_enabled = false
+	local saved_cframe = nil
+	main_tab:CreateToggle({
+		Name = _ability_name,
+		CurrentValue = false,
+		Callback = function(_toggle_value)
+			is_enabled = _toggle_value
+			if not selected_target then
+				return
+			end
+			local player_char = tab_local_player.Character or tab_local_player.CharacterAdded:Wait()
+			local player_root = player_char:WaitForChild("HumanoidRootPart")
+			local target_root = selected_target.Character:WaitForChild("HumanoidRootPart")
+			if not is_enabled then
+				if heartbeat_connection then
+					heartbeat_connection:Disconnect()
+				end
+				heartbeat_connection = nil
+				if saved_cframe then
+					player_root.CFrame = saved_cframe
+					player_root.Velocity = Vector3.zero
+					player_root.RotVelocity = Vector3.zero
+					saved_cframe = nil
+				end
+				return
+			end
+			saved_cframe = player_root.CFrame
+			heartbeat_connection = tab_run_service.Heartbeat:Connect(function()
+				if not is_enabled then
+					return
+				end
+				player_root.CFrame = CFrame.new(target_root.Position + _offset_vector) * CFrame.Angles( - math.pi / (2), 0, 0)
+				player_root.Velocity = _offset_vector.Magnitude > 0 and Vector3.new(500, 500, 500) or Vector3.zero
+				player_root.RotVelocity = _offset_vector.Magnitude > 0 and Vector3.new(500, 500, 500) or Vector3.zero
+				sethiddenproperty(player_root, "PhysicsRepRootPart", target_root)
+				if _should_kill then
+					task.wait(0.5)
+					player_char:FindFirstChildOfClass("Humanoid").Health = 0
+				end
+			end)
+		end
+	})
+end
+create_ability_toggle("Fling Player", Vector3.new(0, 0, 0), false)
+create_ability_toggle("Fling 2.0", Vector3.new(0, -2.5, 0), false)
+create_ability_toggle("Platform Fly", Vector3.new(0, -4, 0), false)
+create_ability_toggle("Magic Carpet", Vector3.new(0, -3.6, 0), false)
+create_ability_toggle("Elevator", Vector3.new(0, -3, 0), false) do
+	local heartbeat_connection_elev
+	local is_elevator_enabled = false
+	local saved_cframe_elev = nil
+end
+do
+	local anti_jump_connection
+	local anti_jump_enabled = false
+	local anti_jump_saved_cframe = nil
+	main_tab:CreateToggle({
+		Name = "Anti Jump",
+		CurrentValue = false,
+		Callback = function(_toggle_value)
+			anti_jump_enabled = _toggle_value
+			if not selected_target then
+				return
+			end
+			local player_char = tab_local_player.Character or tab_local_player.CharacterAdded:Wait()
+			local player_root = player_char:WaitForChild("HumanoidRootPart")
+			local target_root = selected_target.Character:WaitForChild("HumanoidRootPart")
+			if not anti_jump_enabled then
+				if anti_jump_connection then
+					anti_jump_connection:Disconnect()
+				end
+				anti_jump_connection = nil
+				if anti_jump_saved_cframe then
+					player_root.CFrame = anti_jump_saved_cframe
+					player_root.Velocity = Vector3.zero
+					player_root.RotVelocity = Vector3.zero
+					anti_jump_saved_cframe = nil
+				end
+				return
+			end
+			anti_jump_saved_cframe = player_root.CFrame
+			anti_jump_connection = tab_run_service.Heartbeat:Connect(function()
+				if not anti_jump_enabled then
+					return
+				end
+				player_root.Velocity = Vector3.zero
+				player_root.RotVelocity = Vector3.zero
+				player_root.CFrame = CFrame.new(target_root.Position + Vector3.new(0, 3.5, 0)) * CFrame.Angles( - math.pi / (2), 0, 0)
+				sethiddenproperty(player_root, "PhysicsRepRootPart", target_root)
+			end)
+		end
+	})
+end
+local welder_players_service = game:GetService("Players")
+local welder_run_service = game:GetService("RunService")
+local welder_local_player = welder_players_service.LocalPlayer
+local welder_utils = {}
+function welder_utils.glue(_target_player, _should_glue)
+	local player_char = welder_local_player.Character
+	local player_root = player_char and player_char:FindFirstChild("HumanoidRootPart")
+	if not player_root or not _target_player.Character or not _target_player.Character:FindFirstChild("HumanoidRootPart") then
+		return
+	end
+	if _should_glue then
+		sethiddenproperty(player_root, "PhysicsRepRootPart", _target_player.Character.HumanoidRootPart)
+	else
+		sethiddenproperty(player_root, "PhysicsRepRootPart", player_root)
+	end
+end
+function welder_utils.tp(_target_player, _offset_cframe)
+	_offset_cframe = _offset_cframe or CFrame.new()
+	local player_char = welder_local_player.Character
+	local player_root = player_char and player_char:FindFirstChild("HumanoidRootPart")
+	if player_root and(_target_player.Character and _target_player.Character:FindFirstChild("HumanoidRootPart")) then
+		player_root.CFrame = _target_player.Character.HumanoidRootPart.CFrame * _offset_cframe
+		player_root.Velocity = Vector3.zero
+	end
+end
+local rocket_first_enabled = false
+local rocket_first_connection
+local target_players_service = game:GetService("Players")
+local target_run_service = game:GetService("RunService")
+local target_local_player = target_players_service.LocalPlayer
+local target_utils = {}
+function target_utils.glue(_target_player, _should_glue)
+	local player_char = target_local_player.Character
+	local player_root = player_char and player_char:FindFirstChild("HumanoidRootPart")
+	if not player_root or not _target_player.Character or not _target_player.Character:FindFirstChild("HumanoidRootPart") then
+		return
+	end
+	if _should_glue then
+		sethiddenproperty(player_root, "PhysicsRepRootPart", _target_player.Character.HumanoidRootPart)
+	else
+		sethiddenproperty(player_root, "PhysicsRepRootPart", player_root)
+	end
+end
+function target_utils.tp(_target_player, _offset_cframe)
+	_offset_cframe = _offset_cframe or CFrame.new()
+	local player_char = target_local_player.Character
+	local player_root = player_char and player_char:FindFirstChild("HumanoidRootPart")
+	if player_root and(_target_player.Character and _target_player.Character:FindFirstChild("HumanoidRootPart")) then
+		player_root.CFrame = _target_player.Character.HumanoidRootPart.CFrame * _offset_cframe
+		player_root.Velocity = Vector3.zero
+	end
+end
+local infinite_jump_enabled = false
+local infinite_jump_connection
+main_tab:CreateToggle({
+	Name = "Infinite Jump",
+	CurrentValue = false,
+	Callback = function(_toggle_value)
+		infinite_jump_enabled = _toggle_value
+		if infinite_jump_connection then
+			infinite_jump_connection:Disconnect()
+			infinite_jump_connection = nil
+		end
+		if not selected_target then
+			return
+		end
+		if not infinite_jump_enabled then
+			target_utils.glue(selected_target, false)
+			return
+		end
+		infinite_jump_connection = target_run_service.Heartbeat:Connect(function()
+			if not infinite_jump_enabled then
+				return
+			end
+			target_utils.tp(selected_target, CFrame.new(0, -5.75, 0))
+			target_utils.glue(selected_target, true)
+		end)
+	end
+})
+main_tab:CreateToggle({
+	Name = "Speed Boost (slow)",
+	CurrentValue = false,
+	Callback = function(_toggle_value)
+		infinite_jump_enabled = _toggle_value
+		if infinite_jump_connection then
+			infinite_jump_connection:Disconnect()
+			infinite_jump_connection = nil
+		end
+		if not selected_target then
+			return
+		end
+		if not infinite_jump_enabled then
+			target_utils.glue(selected_target, false)
+			return
+		end
+		infinite_jump_connection = target_run_service.Heartbeat:Connect(function()
+			if not infinite_jump_enabled then
+				return
+			end
+			target_utils.tp(selected_target, CFrame.new(0, .7, 1))
+			target_utils.glue(selected_target, true)
+		end)
+	end
+})
+main_tab:CreateToggle({
+	Name = "Speed Boost (medium)",
+	CurrentValue = false,
+	Callback = function(_toggle_value)
+		infinite_jump_enabled = _toggle_value
+		if infinite_jump_connection then
+			infinite_jump_connection:Disconnect()
+			infinite_jump_connection = nil
+		end
+		if not selected_target then
+			return
+		end
+		if not infinite_jump_enabled then
+			target_utils.glue(selected_target, false)
+			return
+		end
+		infinite_jump_connection = target_run_service.Heartbeat:Connect(function()
+			if not infinite_jump_enabled then
+				return
+			end
+			target_utils.tp(selected_target, CFrame.new(0, .7, 0.5))
+			target_utils.glue(selected_target, true)
+		end)
+	end
+})
+main_tab:CreateToggle({
+	Name = "Speed Boost (fast)",
+	CurrentValue = false,
+	Callback = function(_toggle_value)
+		infinite_jump_enabled = _toggle_value
+		if infinite_jump_connection then
+			infinite_jump_connection:Disconnect()
+			infinite_jump_connection = nil
+		end
+		if not selected_target then
+			return
+		end
+		if not infinite_jump_enabled then
+			target_utils.glue(selected_target, false)
+			return
+		end
+		infinite_jump_connection = target_run_service.Heartbeat:Connect(function()
+			if not infinite_jump_enabled then
+				return
+			end
+			target_utils.tp(selected_target, CFrame.new(0, .7, .35))
+			target_utils.glue(selected_target, true)
+		end)
+	end
+})
+main_tab:CreateToggle({
+	Name = "Movement Breaker",
+	CurrentValue = false,
+	Callback = function(_toggle_value)
+		infinite_jump_enabled = _toggle_value
+		if infinite_jump_connection then
+			infinite_jump_connection:Disconnect()
+			infinite_jump_connection = nil
+		end
+		if not selected_target then
+			return
+		end
+		if not infinite_jump_enabled then
+			target_utils.glue(selected_target, false)
+			return
+		end
+		infinite_jump_connection = target_run_service.Heartbeat:Connect(function()
+			if not infinite_jump_enabled then
+				return
+			end
+			target_utils.tp(selected_target, CFrame.new(0, .7, -0.8))
+			target_utils.glue(selected_target, true)
+		end)
+	end
+}) do
+	local rocket_connection
+	local rocket_enabled
+	local rocket_saved_cframe = false
+	local rocket_run_service = game:GetService("RunService")
+	local rocket_local_player = (game:GetService("Players")).LocalPlayer
+	main_tab:CreateToggle({
+		Name = "Rocket Target",
+		CurrentValue = false,
+		Callback = function(_toggle_value)
+			rocket_enabled = _toggle_value
+			if not selected_target or not selected_target.Character then
+				return
+			end
+			local target_root = selected_target.Character:WaitForChild("HumanoidRootPart")
+			local player_char = rocket_local_player.Character or rocket_local_player.CharacterAdded:Wait()
+			local player_root = player_char:WaitForChild("HumanoidRootPart")
+			if not rocket_enabled then
+				if rocket_connection then
+					rocket_connection:Disconnect()
+				end
+				rocket_connection = nil
+				if rocket_saved_cframe then
+					player_root.CFrame = rocket_saved_cframe
+					player_root.Velocity = Vector3.zero
+					player_root.RotVelocity = Vector3.zero
+					rocket_saved_cframe = nil
+				end
+				return
+			end
+			rocket_saved_cframe = player_root.CFrame
+			rocket_connection = rocket_run_service.Heartbeat:Connect(function()
+				if not rocket_enabled then
+					return
+				end
+				if not target_root.Parent then
+					return
+				end
+				local target_below = target_root.Position + Vector3.new(0, -3, 0)
+				player_root.CFrame = CFrame.new(target_below, target_below + Vector3.new(0, 1, 0))
+				player_root.Velocity = Vector3.new(0, 50, 0)
+				player_root.RotVelocity = Vector3.zero
+				if sethiddenproperty then
+					pcall(function()
+						sethiddenproperty(player_root, "PhysicsRepRootPart", target_root)
+					end)
+				end
+				task.delay(.2, function()
+					if rocket_connection then
+						rocket_connection:Disconnect()
+					end
+					rocket_connection = nil
+					rocket_enabled = false
+					if rocket_saved_cframe then
+						player_root.CFrame = rocket_saved_cframe
+						player_root.Velocity = Vector3.zero
+						player_root.RotVelocity = Vector3.zero
+						rocket_saved_cframe = nil
+					end
+					pcall(function()
+						main_tab:SetToggle("Rocket Target", false)
+					end)
+				end)
+			end)
+		end
+	})
+end
+main_tab:CreateToggle({
+	Name = "GODSPEED Rocket Target",
+	CurrentValue = false,
+	Callback = function(_toggle_value)
+		infinite_jump_enabled = _toggle_value
+		if not selected_target or not selected_target.Character then
+			return
+		end
+		local target_root = selected_target.Character:WaitForChild("HumanoidRootPart")
+		local player_char = target_local_player.Character or target_local_player.CharacterAdded:Wait()
+		local player_root = player_char:WaitForChild("HumanoidRootPart")
+		if not infinite_jump_enabled then
+			if infinite_jump_connection then
+				infinite_jump_connection:Disconnect()
+			end
+			infinite_jump_connection = nil
+			if og_cframe then
+				player_root.CFrame = og_cframe
+				player_root.Velocity = Vector3.zero
+				player_root.RotVelocity = Vector3.zero
+				og_cframe = nil
+			end
+			return
+		end
+		og_cframe = player_root.CFrame
+		infinite_jump_connection = target_run_service.Heartbeat:Connect(function()
+			if not infinite_jump_enabled then
+				return
+			end
+			if not target_root.Parent then
+				return
+			end
+			local target_below = target_root.Position + Vector3.new(0, -3, 0)
+			player_root.CFrame = CFrame.new(target_below, target_below + Vector3.new(0, 1, 0))
+			player_root.Velocity = Vector3.new(0, 5000, 0)
+			player_root.RotVelocity = Vector3.zero
+			if sethiddenproperty then
+				pcall(function()
+					sethiddenproperty(player_root, "PhysicsRepRootPart", target_root)
+				end)
+			end
+			task.delay(.2, function()
+				if infinite_jump_connection then
+					infinite_jump_connection:Disconnect()
+				end
+				infinite_jump_connection = nil
+				infinite_jump_enabled = false
+				if og_cframe then
+					player_root.CFrame = og_cframe
+					player_root.Velocity = Vector3.zero
+					player_root.RotVelocity = Vector3.zero
+					og_cframe = nil
+				end
+				pcall(function()
+					main_tab:SetToggle("Rocket Target", false)
+				end)
+			end)
+		end)
+	end
+})
+local games_tab = main_window:CreateTab("Games", 4483362458)
+local game_target = nil
+local word_to_guess = ""
+local game_heartbeat_conn_1 = nil
+local game_heartbeat_conn_2 = nil
+games_tab:CreateInput({
+	Name = "Set Target",
+	PlaceholderText = "Username / Display",
+	RemoveTextAfterFocusLost = false,
+	Callback = function(_inputText)
+		_inputText = (tostring(_inputText or "")):lower()
+		game_target = nil
+		for _idx, _player in ipairs(target_players_service:GetPlayers()) do
+			local player_name_lower = _player.Name:lower()
+			local player_display_name_lower = (_player.DisplayName or _player.Name):lower()
+			if player_name_lower:sub(1, #_inputText) == _inputText or player_display_name_lower:sub(1, #_inputText) == _inputText then
+				game_target = _player
+				break
+			end
+		end
+		if game_target then
+			rayfield_lib:Notify({
+				Title = "Game Target Selected",
+				Content = game_target.Name,
+				Duration = 3
+			})
+		end
+	end
+})
+games_tab:CreateInput({
+	Name = "Word To Guess",
+	PlaceholderText = "Word they must say",
+	RemoveTextAfterFocusLost = false,
+	Callback = function(_inputText)
+		word_to_guess = (tostring(_inputText or "")):lower()
+	end
+})
+games_tab:CreateButton({
+	Name = "Guess To Jump",
+	Callback = function()
+		if not game_target then
+			return
+		end
+		local player_char = target_local_player.Character or target_local_player.CharacterAdded:Wait()
+		local player_root = player_char:WaitForChild("HumanoidRootPart")
+		local target_char = game_target.Character or game_target.CharacterAdded:Wait()
+		local target_root = target_char:WaitForChild("HumanoidRootPart")
+		if game_heartbeat_conn_1 then
+			game_heartbeat_conn_1:Disconnect()
+		end
+		if game_heartbeat_conn_2 then
+			game_heartbeat_conn_2:Disconnect()
+		end
+		game_heartbeat_conn_1 = target_run_service.Heartbeat:Connect(function()
+			if not player_root or not target_root then
+				return
+			end
+			player_root.Velocity = Vector3.zero
+			player_root.RotVelocity = Vector3.zero
+			player_root.CFrame = CFrame.new(target_root.Position + Vector3.new(0, 3.5, 0)) * CFrame.Angles( - math.pi / (2), 0, 0)
+			sethiddenproperty(player_root, "PhysicsRepRootPart", target_root)
+		end)
+	end
+})
+local nan_fling_tab = main_window:CreateTab("NaN flinging", 4483362458)
+local nan_target_name = ""
+local nan_fling_connection
+local nan_fling_call_counter = 0 nan_fling_tab:CreateInput({
+	Name = "Select Target",
+	PlaceholderText = "Username / DisplayName",
+	RemoveTextAfterFocusLost = false,
+	Callback = function(_inputText)
+		nan_target_name = tostring(_inputText or "")
+	end
+})
+nan_fling_tab:CreateButton({
+	Name = "NaN Fling",
+	Callback = function()
+		if nan_target_name == "" then
+			return
+		end
+		nan_fling_call_counter = nan_fling_call_counter + (1)
+		local current_fling_id = nan_fling_call_counter
+		if nan_fling_connection then
+			nan_fling_connection:Disconnect()
+			nan_fling_connection = nil
+		end
+		local target_player
+		for _idx, _player in ipairs(target_players_service:GetPlayers()) do
+			if _player ~= local_player_2 and((_player.Name:lower()):find(nan_target_name:lower()) or _player.DisplayName
+			and(_player.DisplayName:lower()):find(nan_target_name:lower())) then
+				target_player = _player
+				break
+			end
+		end
+		if not target_player or not target_player.Character then
+			return
+		end
+		local player_char = local_player_2.Character or local_player_2.CharacterAdded:Wait()
+		local player_humanoid = player_char:WaitForChild("Humanoid")
+		local player_root = player_char:WaitForChild("HumanoidRootPart")
+		local target_root = target_player.Character:FindFirstChild("HumanoidRootPart")
+		if not target_root then
+			return
+		end
+		local saved_cframe = player_root.CFrame
+		local saved_velocity = player_root.Velocity
+		local saved_platform_stand = player_humanoid.PlatformStand
+		local nan_value = (0) / (0)
+		local nan_vector = Vector3.new(nan_value, nan_value, nan_value)
+		player_humanoid.PlatformStand = true
+		local fling_start_time = tick()
+		nan_fling_connection = target_run_service.Heartbeat:Connect(function()
+			if nan_fling_call_counter ~= current_fling_id then
+				return
+			end
+			if tick() - fling_start_time >= 1.5 then
+				nan_fling_connection:Disconnect()
+				nan_fling_connection = nil
+				task.defer(function()
+					if nan_fling_call_counter ~= current_fling_id then
+						return
+					end
+					player_humanoid.PlatformStand = saved_platform_stand
+					player_root.AssemblyLinearVelocity = Vector3.zero
+					player_root.AssemblyAngularVelocity = Vector3.zero
+					player_root.CFrame = saved_cframe player_root.Velocity = saved_velocity
+					player_root.RotVelocity = Vector3.zero
+					pcall(sethiddenproperty, player_root, "PhysicsRepRootPart", nil)
+				end)
+				return
+			end
+			player_root.CFrame = target_root.CFrame
+			player_root.AssemblyLinearVelocity = nan_vector player_root.AssemblyAngularVelocity = nan_vector pcall(function()
+				player_humanoid:Move(nan_vector)
+			end)
+			pcall(sethiddenproperty, player_root, "PhysicsRepRootPart", target_root)
+		end)
+	end
+})
+local other_tab = main_window:CreateTab("Other Stuff", 4483362458)
+local anti_fling_button = other_tab:CreateButton({
+	Name = "Anti Fling",
+	Callback = function()
+		local anti_fling_players_service = game:GetService("Players")
+		local anti_fling_run_service = game:GetService("RunService")
+		local gui_service = game:GetService("StarterGui")
+		local sound_service = game:GetService("SoundService")
+		local anti_fling_local_player = anti_fling_players_service.LocalPlayer
+		local fling_threshold = 67
+		local fling_duration = 0.5
+		local normal_physics = PhysicalProperties.new(.7, .3, 0.5)
+		local disabled_physics = PhysicalProperties.new(0, 0, 0)
+		local is_anti_fling_active = true
+		local flung_players = {}
+		local player_fling_time = {}
+		local notification_sound = Instance.new("Sound", sound_service)
+		notification_sound.SoundId = "rbxassetid://9086208751"
+		notification_sound.Volume = 1
+		local function send_notification(_message)
+			gui_service:SetCore("SendNotification", {
+				Title = "Lisa's Anti Fling",
+				Text = _message,
+				Duration = 4
+			})
+			notification_sound:Play()
+			print("[REX] " .. _message)
+		end
+		local function set_part_collision(_part, _can_collide)
+			for _idx, _descendant in ipairs(_part:GetDescendants()) do
+				if _descendant:IsA("BasePart") then
+					_descendant.CanCollide = _can_collide
+					_descendant.CustomPhysicalProperties = _can_collide and normal_physics or disabled_physics
+					if not _can_collide then
+						_descendant.AssemblyLinearVelocity = Vector3.zero
+						_descendant.AssemblyAngularVelocity = Vector3.zero
+					end
+				end
+			end
+		end
+		local function find_player_by_name(_search_name)
+			_search_name = (tostring(_search_name or "")):lower()
+			for _idx, _player in ipairs(anti_fling_players_service:GetPlayers()) do
+				local player_name_lower = _player.Name:lower()
+				local player_display_name_lower = (_player.DisplayName or _player.Name):lower()
+				if player_name_lower == _search_name or player_display_name_lower == _search_name or player_name_lower:sub(1, #_search_name) == _search_name or player_display_name_lower:sub(1, #_search_name) == _search_name then
+					return _player
+				end
+			end
+		end
+		anti_fling_run_service.RenderStepped:Connect(function(_delta_time)
+			if not is_anti_fling_active then
+				return
+			end
+			for _idx, _player in ipairs(anti_fling_players_service:GetPlayers()) do
+				if _player ~= anti_fling_local_player then
+					local player_char = _player.Character
+					local player_root = player_char and player_char:FindFirstChild("HumanoidRootPart")
+					if player_root then
+						local is_being_flung = false
+						for _idx2, _other_player in ipairs(anti_fling_players_service:GetPlayers()) do
+							if _other_player ~= _player then
+								local other_char = _other_player.Character
+								local other_root = other_char and other_char:FindFirstChild("HumanoidRootPart")
+								if other_root and other_root.AssemblyLinearVelocity.Magnitude > fling_threshold then
+									is_being_flung = true
+									break
+								end
+							end
+						end
+						if player_root.AssemblyLinearVelocity.Magnitude > fling_threshold and not is_being_flung then
+							player_fling_time[_player] = (player_fling_time[_player] or 0) + _delta_time
+						else
+							player_fling_time[_player] = 0
+						end
+						if player_fling_time[_player] >= fling_duration and not flung_players[_player] then
+							flung_players[_player] = true
+							set_part_collision(player_char, false)
+							send_notification(_player.Name .. (" is flinging! Type 'unanti " .. (_player.Name .. "' to restore collision.")))
+						end
+						if flung_players[_player] then
+							for _idx3, _descendant in ipairs(player_char:GetDescendants()) do
+								if _descendant:IsA("BasePart") then
+									_descendant.AssemblyLinearVelocity = Vector3.zero
+									_descendant.AssemblyAngularVelocity = Vector3.zero
+								end
+							end
+						end
+					end
+				end
+			end
+		end)
+		anti_fling_local_player.Chatted:Connect(function(_message)
+			_message = _message:lower()
+			if _message:sub(1, 7) == "disableanti " then
+				local player_name = _message:sub(8)
+				local found_player = find_player_by_name(player_name)
+				if found_player and flung_players[found_player] then
+					local player_char = found_player.Character
+					if player_char then
+						set_part_collision(player_char, true)
+						flung_players[found_player] = nil
+						send_notification("[REX] Collision restored for " .. found_player.Name)
+					end
+				end
+			elseif _message:sub(1, 4) == "!bl " then
+				local player_name = _message:sub(5)
+				local found_player = find_player_by_name(player_name)
+				if found_player and not flung_players[found_player] then
+					local player_char = found_player.Character
+					if player_char then
+						set_part_collision(player_char, false)
+						flung_players[found_player] = true
+						send_notification("plr.Name manually blacklisted for no-collision!")
+					end
+				end
+			elseif _message == "disableanti" then
+				is_anti_fling_active = false
+				send_notification("Lisa's Anti Fling Disabled")
+			elseif _message == "enableanti" then
+				is_anti_fling_active = true
+				send_notification("Lisa's Anti Fling FPS Enabled")
+			end
+		end)
+		send_notification("Lisa's Anti Fling Loaded!")
+		send_notification("Use '!bl username' to blacklist, 'unanti username' to restore collision, 'enableanti'/'disableanti' to toggle.")
+	end
+})
